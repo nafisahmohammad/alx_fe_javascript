@@ -8,24 +8,20 @@
 <body>
   <h1>Dynamic Quote Generator</h1>
 
+  <!-- Sync Status -->
+  <p id="syncStatus">Status: Not synced</p>
+  <button id="manualSync">Sync with Server</button>
+
   <!-- Category Filter -->
   <select id="categoryFilter" onchange="filterQuotes()">
     <option value="all">All Categories</option>
   </select>
 
-  <!-- Quote Display -->
   <div id="quoteDisplay"></div>
 
-  <!-- Controls -->
   <button id="newQuote">Show New Quote</button>
-  <button id="exportQuotes">Export Quotes (JSON)</button>
-
-  <!-- Import JSON -->
-  <input type="file" id="importFile" accept=".json" />
-
-  <!-- Add Quote Form -->
-  <div id="formContainer"></div>
 
   <script src="script.js"></script>
 </body>
 </html>
+

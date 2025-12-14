@@ -1,70 +1,134 @@
+
+// --------------------
+// STORAGE HELPERS
+// --------------------
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
+
+function loadQuotes() {
+  const stored = localStorage.getItem("quotes");
+  return stored ? JSON.parse(stored) : [];
+}
+
 // --------------------
 // INITIAL DATA
 // --------------------
-const quotes = JSON.parse(localStorage.getItem("quotes")) || [
-  { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
-  { text: "Life is what happens when you're busy making other plans.", category: "Life" },
-  { text: "Success is not final, failure is not fatal.", category: "Inspiration" },
-  { text: "Believe you can and you're halfway there.", category: "Motivation" }
-];
+let quotes = loadQuotes();
 
 // --------------------
 // DOM ELEMENTS
 // --------------------
 const quoteDisplay = document.getElementById("quoteDisplay");
 const categoryFilter = document.getElementById("categoryFilter");
+const syncStatus = document.getElementById("syncStatus");
+const manualSyncBtn = document.getElementById("manualSync");
 
 // --------------------
 // POPULATE CATEGORIES
 // --------------------
 function populateCategories() {
-  const categories = [...new Set(quotes.map(quote => quote.category))];
+  const categories = [...new Set(quotes.map(q => q.category))];
 
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
 
-  categories.forEach(category => {
+  categories.forEach(cat => {
     const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category;
+    option.value = cat;
+    option.textContent = cat;
     categoryFilter.appendChild(option);
   });
 }
 
 // --------------------
-// FILTER QUOTES (REQUIRED NAME)
+// FILTER QUOTES
 // --------------------
-function filterQuote() {
-  const selectedCategory = categoryFilter.value;
-
-  // ✅ Save selected category
-  localStorage.setItem("selectedCategory", selectedCategory);
-
+function filterQuotes() {
+  const selected = categoryFilter.value;
   quoteDisplay.innerHTML = "";
 
-  const filteredQuotes =
-    selectedCategory === "all"
+  const filtered =
+    selected === "all"
       ? quotes
-      : quotes.filter(quote => quote.category === selectedCategory);
+      : quotes.filter(q => q.category === selected);
 
-  filteredQuotes.forEach(quote => {
+  filtered.forEach(q => {
     const p = document.createElement("p");
-    p.textContent = quote.text;
+    p.textContent = `"${q.text}"`;
     quoteDisplay.appendChild(p);
   });
 }
 
 // --------------------
-// RESTORE LAST SELECTED CATEGORY
+// SERVER SYNC (SIMULATION)
 // --------------------
-const savedCategory = localStorage.getItem("selectedCategory");
-if (savedCategory) {
-  categoryFilter.value = savedCategory;
+async function fetchServerQuotes() {
+  syncStatus.textContent = "Status: Syncing with server...";
+
+  const response = await fetch(
+    "https://jsonplaceholder.typicode.com/posts?_limit=5"
+  );
+  const data = await response.json();
+
+  // Convert server data to quotes format
+  const serverQuotes = data.map(post => ({
+    text: post.title,
+    category: `User-${post.userId}`,
+    source: "server"
+  }));
+
+  resolveConflicts(serverQuotes);
 }
+
+// --------------------
+// CONFLICT RESOLUTION
+// Strategy: SERVER WINS
+// --------------------
+function resolveConflicts(serverQuotes) {
+  let conflictsResolved = false;
+
+  serverQuotes.forEach(serverQuote => {
+    const exists = quotes.find(
+      localQuote => localQuote.text === serverQuote.text
+    );
+
+    if (!exists) {
+      quotes.push(serverQuote);
+      conflictsResolved = true;
+    }
+  });
+
+  if (conflictsResolved) {
+    saveQuotes();
+    populateCategories();
+    filterQuotes();
+    notifyConflictResolved();
+  }
+
+  syncStatus.textContent = "Status: Synced successfully";
+}
+
+// --------------------
+// USER NOTIFICATION
+// --------------------
+function notifyConflictResolved() {
+  alert(
+    "Data was updated from the server.\nServer data took precedence where conflicts occurred."
+  );
+}
+
+// --------------------
+// PERIODIC SYNC
+// --------------------
+setInterval(fetchServerQuotes, 30000); // every 30 seconds
+
+// --------------------
+// MANUAL SYNC
+// --------------------
+manualSyncBtn.addEventListener("click", fetchServerQuotes);
 
 // --------------------
 // INITIALIZE APP
 // --------------------
 populateCategories();
-filterQuote();
-
-
+filterQuotes();
